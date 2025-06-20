@@ -1,5 +1,5 @@
 ﻿using Core.Entities;
-using Infrastructure.Interfaces;
+using Core.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Data;
@@ -39,6 +39,13 @@ public class ProductRepository(StoreContext context) : IProductRepository
         };
        
         return await query.ToListAsync();
+    }
+
+    public async Task<IReadOnlyList<string>> GetTypesAsync()
+    {
+        return await context.Products.Select(x => x.Type)
+            .Distinct()
+            .ToListAsync();
     }
 
     public bool ProductExists(int id)
