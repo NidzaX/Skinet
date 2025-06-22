@@ -2,8 +2,22 @@ using API.Middleware;
 using Core.Interfaces;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography.X509Certificates;
+
 
 var builder = WebApplication.CreateBuilder(args);
+
+var certPath = Path.Combine(builder.Environment.ContentRootPath, "..", "..", "client", "ssl", "localhost.pfx");
+
+var certificate = X509CertificateLoader.LoadPkcs12FromFile(certPath, password: "");
+
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ConfigureHttpsDefaults(httpsOptions =>
+    {
+        httpsOptions.ServerCertificate = certificate;
+    });
+});
 
 builder.Services.AddControllers();
 builder.Services.AddDbContext<StoreContext>(opt =>

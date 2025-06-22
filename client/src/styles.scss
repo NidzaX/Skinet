@@ -1,4 +1,5 @@
 /* You can add global styles to this file, and also import other style files */
+@use "@angular/material" as mat;
 @import "tailwindcss";
 
 html,
@@ -8,4 +9,22 @@ body {
 body {
   margin: 0;
   font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+$customTheme: mat.define-theme();
+
+.custom-theme {
+  @include mat.all-component-themes($customTheme);
+
+  //override the button styles
+  .mdc-button,
+  .mdc-raised-button,
+  .mdc-stroked-button,
+  .mdc-flat-button {
+    @apply rounded-md;
+  }
+}
+
+.container {
+  @apply mx-auto max-w-screen-2xl;
 }
