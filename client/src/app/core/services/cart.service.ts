@@ -62,11 +62,16 @@ export class CartService {
     if (!cart) return;
     const index = cart.items.findIndex((x) => x.productId === productId);
     if (index !== -1) {
+      console.log(
+        `Removing quantity ${quantity} from productId ${productId}, current qty: ${cart.items[index].quantity}`
+      );
       if (cart.items[index].quantity > quantity) {
         cart.items[index].quantity -= quantity;
       } else {
         cart.items.splice(index, 1);
       }
+      console.log('Cart items after removal:', cart.items);
+
       if (cart.items.length === 0) {
         this.deleteCart();
       } else {
