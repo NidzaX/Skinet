@@ -18,8 +18,8 @@ namespace API.Controllers
         {
             var user = new AppUser
             {
-                Firstame = registerDto.FirstName,
-                Lastname = registerDto.LastName,
+                FirstName = registerDto.FirstName,
+                LastName = registerDto.LastName,
                 Email = registerDto.Email,
                 UserName = registerDto.Email,
             };
@@ -57,8 +57,8 @@ namespace API.Controllers
 
             return Ok(new
             {
-                user.Firstame,
-                user.Lastname,
+                user.FirstName,
+                user.LastName,
                 user.Email,
                 Address = user.Address?.ToDto()
             });
@@ -90,6 +90,22 @@ namespace API.Controllers
             if (!result.Succeeded) return BadRequest("Problem updating address");
 
             return Ok(user.Address.ToDto());
+        }
+
+        [Authorize]
+        [HttpPost("update-name")]
+        public async Task<ActionResult> UpdateName(UpdateNameDto updateNameDto)
+        {
+            var user = await signInManager.UserManager.GetUserByEmailWithAddress(User);
+            if (user == null) return NotFound("User not found");
+
+            user.FirstName = updateNameDto.FirstName;
+            user.LastName = updateNameDto.LastName;
+
+            var result = await signInManager.UserManager.UpdateAsync(user);
+            if (!result.Succeeded) return BadRequest("Problem updating name");
+
+            return Ok(new { user.FirstName, user.LastName });
         }
 
     }

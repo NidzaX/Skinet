@@ -9,7 +9,6 @@ public class AddressDto
     public string? Line2 { get; set; }
     [Required]
     public string City { get; set; } = string.Empty;
-    [Required]
     public string State { get; set; } = string.Empty;
     [Required]
     public string PostalCode { get; set; } = string.Empty;
