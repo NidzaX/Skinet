@@ -18,7 +18,7 @@ public class PaymentsController(IPaymentService paymentService, IGenericReposito
         return Ok(cart);
     }
 
-    [HttpGet("delvery-methods")]
+    [HttpGet("delivery-methods")]
     public async Task<ActionResult<IReadOnlyList<DeliveryMethod>>> GetDeliveryMethods()
     {
         return Ok(await dmRepo.ListAllAsync());

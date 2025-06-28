@@ -12,6 +12,7 @@ import { LoginComponent } from './core/services/login/login.component';
 import { RegisterComponent } from './core/services/register/register.component';
 import { authGuard } from './core/guards/auth.guard';
 import { emptyGuardGuard } from './core/guards/empty-guard.guard';
+import { CheckoutSuccessComponent } from './features/checkout/checkout-success/checkout-success.component';
 
 export const routes: Routes = [
   { path: '', component: HomeComponent },
@@ -22,6 +23,11 @@ export const routes: Routes = [
     path: 'checkout',
     component: CheckoutComponent,
     canActivate: [authGuard, emptyGuardGuard],
+  },
+  {
+    path: 'checkout/success',
+    component: CheckoutSuccessComponent,
+    canActivate: [authGuard],
   },
   { path: 'account/login', component: LoginComponent },
   { path: 'account/register', component: RegisterComponent },
