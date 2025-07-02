@@ -26,6 +26,8 @@ import { AccountService } from '../../core/services/account.service';
 import { CheckoutDeliveryComponent } from './checkout-delivery/checkout-delivery.component';
 import { CheckoutReviewComponent } from './checkout-review/checkout-review.component';
 import { CartService } from '../../core/services/cart.service';
+import { OrderToCreate, ShippingAddress } from '../../shared/models/order';
+import { OrderService } from '../../core/services/order.service';
 
 @Component({
   selector: 'app-checkout',
@@ -50,6 +52,7 @@ export class CheckoutComponent implements OnInit, OnDestroy {
   private snackBar = inject(SnackbarService);
   private accountService = inject(AccountService);
   private router = inject(Router);
+  private orderService = inject(OrderService);
   cartService = inject(CartService);
   addressElement?: StripeAddressElement;
   paymentElement?: StripePaymentElement;
@@ -125,23 +128,25 @@ export class CheckoutComponent implements OnInit, OnDestroy {
   async onStepChange(event: StepperSelectionEvent) {
     if (event.selectedIndex === 1) {
       if (this.saveAddress) {
-        const result = await this.addressElement?.getValue();
+        const rawAddress = await this.getAddressFromStripeAddress();
 
-        const addr = result?.value.address;
-        const name = result?.value.name;
+        if (rawAddress) {
+          const address = rawAddress as Address;
 
-        if (addr) {
-          const address: Address = {
-            line1: addr.line1,
-            line2: addr.line2 || undefined,
-            city: addr.city,
-            state: addr.state || '',
-            country: addr.country,
-            postalCode: addr.postal_code,
-          };
-
-          await firstValueFrom(this.accountService.updateAddress(address));
+          await firstValueFrom(
+            this.accountService.updateAddress({
+              line1: address.line1,
+              line2: address.line2,
+              city: address.city,
+              state: address.state,
+              country: address.country,
+              postalCode: address.postalCode,
+            })
+          );
         }
+
+        const result = await this.addressElement?.getValue();
+        const name = result?.value.name;
 
         if (name) {
           const [firstName, ...rest] = name.trim().split(' ');
@@ -155,9 +160,11 @@ export class CheckoutComponent implements OnInit, OnDestroy {
         }
       }
     }
+
     if (event.selectedIndex === 2) {
       await firstValueFrom(this.stripeService.createOrUpdatePaymentIntent());
     }
+
     if (event.selectedIndex === 3) {
       await this.getConfirmationToken();
     }
@@ -170,12 +177,24 @@ export class CheckoutComponent implements OnInit, OnDestroy {
         const result = await this.stripeService.confirmPayment(
           this.confirmationToken
         );
-        if (result.error) {
+
+        if (result.paymentIntent?.status === 'succeeded') {
+          const order = await this.createOrderModel();
+          const orderResult = await firstValueFrom(
+            this.orderService.createOrder(order)
+          );
+          if (orderResult) {
+            this.orderService.orderComplete = true;
+            this.cartService.deleteCart();
+            this.cartService.selectedDelivery.set(null);
+            this.router.navigateByUrl('checkout/success');
+          } else {
+            throw new Error('Order creation failed');
+          }
+        } else if (result.error) {
           throw new Error(result.error.message);
         } else {
-          this.cartService.deleteCart();
-          this.cartService.selectedDelivery.set(null);
-          this.router.navigateByUrl('checkout/success');
+          throw new Error('Something went wrong');
         }
       }
     } catch (error: any) {
@@ -184,6 +203,48 @@ export class CheckoutComponent implements OnInit, OnDestroy {
     } finally {
       this.loading = false;
     }
+  }
+
+  private async createOrderModel(): Promise<OrderToCreate> {
+    const cart = this.cartService.cart();
+    const shippingAddress =
+      (await this.getAddressFromStripeAddress()) as ShippingAddress;
+    const card = this.confirmationToken?.payment_method_preview.card;
+
+    if (!cart?.id || !cart?.deliveryMethodId || !card || !shippingAddress) {
+      throw new Error('Problem creating order');
+    }
+
+    return {
+      cartId: cart.id,
+      paymentSummary: {
+        last4: +card.last4,
+        brand: card.brand,
+        expMonth: card.exp_month,
+        expYear: card.exp_year,
+      },
+      deliveryMethodId: cart.deliveryMethodId,
+      shippingAddress,
+    };
+  }
+
+  private async getAddressFromStripeAddress(): Promise<
+    Address | ShippingAddress | null
+  > {
+    const result = await this.addressElement?.getValue();
+    const address = result?.value.address;
+
+    if (address) {
+      return {
+        name: result.value.name,
+        line1: address.line1,
+        line2: address.line1 || undefined,
+        city: address.city,
+        country: address.country,
+        state: address.state || undefined,
+        postalCode: address.postal_code,
+      };
+    } else return null;
   }
 
   onSaveAddressCheckboxChange(event: MatCheckboxChange) {
